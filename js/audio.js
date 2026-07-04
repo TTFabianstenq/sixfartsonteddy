@@ -490,6 +490,27 @@ export class AudioEngine {
     this._noiseBurst(this._noiseWhite, 0.02, 0.04, 'highpass', 4000);
   }
 
+  /** Featherweight tick when the pointer crosses a menu button. */
+  uiHover() {
+    if (!this.ctx) return;
+    this._tone('square', 1320, 0.018, 0.018);
+  }
+
+  /**
+   * Discovery sting: the door light snaps on and something is standing
+   * there. A short detuned shriek over a low body thump — startling,
+   * but far below jumpscare level.
+   */
+  revealSting(pan = 0) {
+    if (!this.ctx) return;
+    const p = this._pan(pan);
+    p.connect(this.master);
+    this._tone('sawtooth', [1180, 860], 0.38, 0.055, 0.004, 0, p);
+    this._tone('sawtooth', [1250, 915], 0.38, 0.045, 0.004, 0, p);
+    this._noiseBurst(this._noiseWhite, 0.14, 0.05, 'highpass', 2600, 0.004, 0, p);
+    this._tone('sine', [72, 44], 0.3, 0.15, 0.004, 0, p);
+  }
+
   /** Bell voice used by the hour tick and the victory chime. */
   _bell(freq, dur, peak, when = 0) {
     this._tone('sine', freq, dur, peak, 0.005, when);

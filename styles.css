@@ -161,7 +161,7 @@ body {
   position: absolute;
   inset: 0;
   z-index: 30;
-  display: none;
+  display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -169,11 +169,34 @@ body {
   padding: 2rem clamp(1rem, 6vw, 5rem);
   background: rgba(3, 3, 6, 0.88);
   text-align: center;
+  /* Hidden screens stay in the layout but fade out and let clicks
+     through to the canvas underneath. */
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.3s ease, visibility 0s linear 0.3s;
 }
 
-.screen.visible { display: flex; }
+.screen.visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity 0.3s ease;
+}
+
 .screen.translucent { background: rgba(3, 3, 6, 0.72); }
 .screen.opaque { background: #000; }
+
+/* Result screens carry a mood: dried blood for a loss, dawn for a win. */
+#screen-gameover {
+  background: radial-gradient(ellipse at center,
+    rgba(46, 8, 12, 0.9) 0%, rgba(4, 2, 4, 0.96) 78%);
+}
+
+#screen-victory {
+  background: radial-gradient(ellipse at center,
+    rgba(54, 42, 16, 0.88) 0%, rgba(5, 4, 3, 0.96) 78%);
+}
 
 .game-title {
   font-size: clamp(2.2rem, 6vw, 4.2rem);

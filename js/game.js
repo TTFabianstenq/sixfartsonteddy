@@ -183,6 +183,16 @@ export class Game {
     // Ambient one-shot scare scheduling (distant clangs, whispers...).
     this.ambientTimer = rand(18, 40);
 
+    // Pointer position in canvas space, for hover feedback on the
+    // office panels, camera map and monitor strip.
+    this.pointer = { x: -1, y: -1 };
+
+    // Transient "2 AM" toast shown when the hour rolls over.
+    this.hourToast = null;
+
+    // Rare glowing-eye glint on the menu backdrop.
+    this._menuGlint = null;
+
     // Frame timing.
     this._last = performance.now();
     this._fps = 60;
@@ -382,6 +392,11 @@ export class Game {
     this.stateTimer += dt;
     this.effects.update(dt);
 
+    if (this.hourToast) {
+      this.hourToast.t -= dt;
+      if (this.hourToast.t <= 0) this.hourToast = null;
+    }
+
     switch (this.state) {
       case STATE.NIGHT_INTRO:
         if (this.stateTimer >= CONFIG.INTRO_SECONDS) {
@@ -426,6 +441,7 @@ export class Game {
       }
       // A soft distant bell marks each passing hour.
       this.audio.hourTick();
+      this.hourToast = { label: this.clockLabel(), t: 2.6 };
     }
   }
 
@@ -496,7 +512,12 @@ export class Game {
       case STATE.PLAYING:
       case STATE.PAUSED: {
         if (this.cameras.isUp) {
+          // The monitor slides up from the bottom edge as it is raised.
+          const lift = easeInOut(this.cameras.raise);
+          ctx.save();
+          ctx.translate(0, (1 - lift) * this.H);
           this.cameras.render(ctx);
+          ctx.restore();
         } else {
           this.office.render(ctx);
         }
@@ -531,6 +552,28 @@ export class Game {
     ctx.restore();
     ctx.fillStyle = 'rgba(0,0,0,0.55)';
     ctx.fillRect(0, 0, this.W, this.H);
+
+    // Once in a while, a pair of eyes catches the light in a doorway.
+    if (!this._menuGlint && chance(0.0015)) {
+      this._menuGlint = { t: 1.6, dur: 1.6, side: chance(0.5) ? 'left' : 'right' };
+    }
+    if (this._menuGlint) {
+      const g = this._menuGlint;
+      g.t -= 1 / 60; // menu backdrop always runs at frame cadence
+      const a = Math.sin(Math.PI * clamp(g.t / g.dur, 0, 1)) * 0.45;
+      const cx = g.side === 'left' ? 142 : 1138;
+      ctx.save();
+      ctx.shadowColor = `rgba(255,196,90,${a})`;
+      ctx.shadowBlur = 14;
+      ctx.fillStyle = `rgba(255,196,90,${a})`;
+      ctx.beginPath();
+      ctx.arc(cx - 13, 292, 4, 0, Math.PI * 2);
+      ctx.arc(cx + 13, 292, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      if (g.t <= 0) this._menuGlint = null;
+    }
+
     this.effects.drawStatic(ctx, 0.1);
   }
 
@@ -542,6 +585,13 @@ export class Game {
     this.canvas.addEventListener('mousedown', (e) => {
       const { x, y } = this._canvasPoint(e);
       this._handlePointer(x, y);
+    });
+
+    this.canvas.addEventListener('mousemove', (e) => {
+      const { x, y } = this._canvasPoint(e);
+      this.pointer.x = x;
+      this.pointer.y = y;
+      this._updateCursor();
     });
 
     // Touch support: treat a tap like a click at the same canvas point.
@@ -567,6 +617,22 @@ export class Game {
       x: (e.clientX - rect.left) * (this.W / rect.width),
       y: (e.clientY - rect.top) * (this.H / rect.height),
     };
+  }
+
+  /** Show a pointer cursor over anything clickable, crosshair elsewhere. */
+  _updateCursor() {
+    let clickable = false;
+    if (this.state === STATE.PLAYING) {
+      const { x, y } = this.pointer;
+      if (this.ui.hitCameraStrip(x, y)) {
+        clickable = true;
+      } else if (this.cameras.isUp) {
+        clickable = this.cameras.hitTest(x, y);
+      } else {
+        clickable = this.office.hitTest(x, y);
+      }
+    }
+    this.canvas.style.cursor = clickable ? 'pointer' : 'crosshair';
   }
 
   _handlePointer(x, y) {

@@ -29,7 +29,8 @@ const BUTTONS = {
   },
 };
 
-const DOOR_ANIM_SPEED = 6; // full open<->close in ~0.17 s
+const DOOR_ANIM_SPEED = 6;    // full open<->close in ~0.17 s
+const LIGHT_AUTO_OFF = 6;     // door lights click off on their own (seconds)
 
 export class Office {
   constructor(game) {
@@ -39,6 +40,10 @@ export class Office {
       right: { closed: false, anim: 0 },
     };
     this.lights = { left: false, right: false };
+    this.lightTimers = { left: 0, right: 0 };
+    // Tracks whether the current "light on + lurker present" episode has
+    // already fired its discovery sting, per side.
+    this._revealSeen = { left: false, right: false };
   }
 
   reset() {
@@ -48,6 +53,10 @@ export class Office {
     this.doors.right.anim = 0;
     this.lights.left = false;
     this.lights.right = false;
+    this.lightTimers.left = 0;
+    this.lightTimers.right = 0;
+    this._revealSeen.left = false;
+    this._revealSeen.right = false;
   }
 
   /* ------------------------------------------------------------------ */
@@ -65,6 +74,7 @@ export class Office {
   toggleLight(side) {
     if (this.game.cameras.isUp) return;
     this.lights[side] = !this.lights[side];
+    this.lightTimers[side] = this.lights[side] ? LIGHT_AUTO_OFF : 0;
     this.game.audio.lightClick();
     this.game.audio.setLightHum(this.lights.left || this.lights.right);
   }
@@ -97,6 +107,15 @@ export class Office {
     return false;
   }
 
+  /** Is this canvas point over a panel button? (hover feedback) */
+  hitTest(x, y) {
+    for (const side of ['left', 'right']) {
+      const b = BUTTONS[side];
+      if (hit(b.door, x, y) || hit(b.light, x, y)) return true;
+    }
+    return false;
+  }
+
   update(dt) {
     for (const side of ['left', 'right']) {
       const door = this.doors[side];
@@ -104,6 +123,29 @@ export class Office {
       if (door.anim !== target) {
         const dir = Math.sign(target - door.anim);
         door.anim = clamp(door.anim + dir * DOOR_ANIM_SPEED * dt, 0, 1);
+      }
+
+      // Tired old bulbs: door lights click off on their own after a
+      // few seconds, so a forgotten switch can't bleed the battery.
+      if (this.lights[side]) {
+        this.lightTimers[side] -= dt;
+        if (this.lightTimers[side] <= 0) {
+          this.lights[side] = false;
+          this.game.audio.lightClick();
+          this.game.audio.setLightHum(this.lights.left || this.lights.right);
+        }
+      }
+
+      // Discovery sting: the light is on and something is standing in
+      // the doorway. Fires once per visit, not every frame.
+      const node = side === 'left' ? 'leftDoor' : 'rightDoor';
+      const revealed = this.lights[side] && !!this.game.animatronicAt(node);
+      if (revealed && !this._revealSeen[side]) {
+        this._revealSeen[side] = true;
+        this.game.audio.revealSting(side === 'left' ? -0.7 : 0.7);
+        this.game.effects.shake(5, 0.3);
+      } else if (!revealed) {
+        this._revealSeen[side] = false;
       }
     }
   }
@@ -120,6 +162,16 @@ export class Office {
     this._drawPanel(ctx, 'left');
     this._drawPanel(ctx, 'right');
     this._drawDesk(ctx);
+
+    // Brownout: below 15% the whole room sags and stutters as the
+    // generator struggles — a wordless warning to ration what's left.
+    const level = this.game.power.level;
+    if (level < 15) {
+      const k = (15 - Math.max(0, level)) / 15;
+      const stutter = chance(0.06) ? 0.14 : 0;
+      ctx.fillStyle = `rgba(0,0,0,${k * 0.3 + stutter})`;
+      ctx.fillRect(0, 0, this.game.W, this.game.H);
+    }
   }
 
   /** Ceiling, back wall and floor. */
@@ -351,6 +403,9 @@ export class Office {
   }
 
   _drawButton(ctx, r, label, on, onColor, offColor) {
+    const ptr = this.game.pointer;
+    const hovered = !this.game.cameras.isUp && hit(r, ptr.x, ptr.y);
+
     ctx.fillStyle = on ? onColor : offColor;
     if (on) {
       ctx.save();
@@ -364,6 +419,11 @@ export class Office {
     ctx.strokeStyle = '#0a0a10';
     ctx.lineWidth = 3;
     ctx.strokeRect(r.x, r.y, r.w, r.h);
+    if (hovered) {
+      ctx.strokeStyle = '#9aa4b4';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(r.x - 4, r.y - 4, r.w + 8, r.h + 8);
+    }
     ctx.fillStyle = on ? '#0d0d12' : '#9a9aa8';
     ctx.font = 'bold 13px "Courier New", monospace';
     ctx.textAlign = 'center';
@@ -494,6 +554,20 @@ export class Office {
     ctx.restore();
     ctx.fillStyle = 'rgba(0,0,0,0.82)';
     ctx.fillRect(0, 0, W, H);
+
+    // Cold spill from the open doorways — the only light left in the
+    // building comes from whatever windows the halls still have.
+    for (const side of ['left', 'right']) {
+      const d = DOORWAY[side];
+      const moon = ctx.createRadialGradient(
+        d.x + d.w / 2, d.y + d.h * 0.45, 30,
+        d.x + d.w / 2, d.y + d.h * 0.45, 340,
+      );
+      moon.addColorStop(0, 'rgba(90,110,150,0.05)');
+      moon.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = moon;
+      ctx.fillRect(0, 60, W, 620);
+    }
 
     if (powerOut.phase === 1) {
       // Twin amber eyes and the faint outline of a bear, keeping time.

@@ -82,6 +82,11 @@ export class UIManager {
     click('btn-next-night', () => g.startNight(g.save.data.currentNight));
     click('btn-victory-menu', () => g.quitToMenu());
 
+    // A featherweight tick as the pointer crosses any menu button.
+    for (const btn of document.querySelectorAll('.menu-btn')) {
+      btn.addEventListener('mouseenter', () => g.audio.uiHover());
+    }
+
     // Settings inputs write straight into the save file.
     const s = g.save.data.settings;
     const volume = document.getElementById('set-volume');
@@ -227,6 +232,43 @@ export class UIManager {
       this._renderPower(ctx);
       this._renderCameraStrip(ctx);
     }
+
+    this._renderHourToast(ctx);
+    this._renderControlsHint(ctx);
+  }
+
+  /** Center-screen "2 AM" flash when the hour rolls over. */
+  _renderHourToast(ctx) {
+    const toast = this.game.hourToast;
+    if (!toast) return;
+    // Quick fade in, hold, slow fade out.
+    const shown = 2.6 - toast.t;
+    const alpha = Math.min(1, shown / 0.3, toast.t / 0.8);
+    ctx.save();
+    ctx.globalAlpha = alpha * 0.85;
+    ctx.fillStyle = '#cfd2d6';
+    ctx.font = 'bold 54px "Courier New", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(toast.label, this.game.W / 2, 200);
+    ctx.restore();
+    ctx.textAlign = 'left';
+  }
+
+  /** First-night key reference, fading out as the shift begins. */
+  _renderControlsHint(ctx) {
+    const g = this.game;
+    if (g.night !== 1 || g.cameras.isUp || g.state !== 'playing') return;
+    if (g.nightTimer > 11) return;
+    const alpha = g.nightTimer > 8 ? (11 - g.nightTimer) / 3 : 1;
+    ctx.save();
+    ctx.globalAlpha = alpha * 0.8;
+    ctx.fillStyle = '#9aa0ac';
+    ctx.font = '18px "Courier New", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Q / E — doors      A / D — lights      SPACE — cameras', g.W / 2, 566);
+    ctx.fillText('or click the panels beside each door', g.W / 2, 592);
+    ctx.restore();
+    ctx.textAlign = 'left';
   }
 
   _renderPower(ctx) {
@@ -268,9 +310,10 @@ export class UIManager {
   _renderCameraStrip(ctx) {
     const g = this.game;
     const r = CAMERA_STRIP;
-    ctx.fillStyle = 'rgba(16,18,26,0.75)';
+    const hovered = this.hitCameraStrip(g.pointer.x, g.pointer.y);
+    ctx.fillStyle = hovered ? 'rgba(26,30,42,0.85)' : 'rgba(16,18,26,0.75)';
     ctx.fillRect(r.x, r.y, r.w, r.h);
-    ctx.strokeStyle = g.cameras.isUp ? '#7fd487' : '#4a505e';
+    ctx.strokeStyle = g.cameras.isUp ? '#7fd487' : (hovered ? '#7a828e' : '#4a505e');
     ctx.lineWidth = 2;
     ctx.strokeRect(r.x, r.y, r.w, r.h);
     ctx.fillStyle = g.cameras.isUp ? '#c6f0ca' : '#9aa0ac';

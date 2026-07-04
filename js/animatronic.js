@@ -149,6 +149,10 @@ class Animatronic {
     const cx = W / 2 + rand(-16, 16) * surge;
     const cy = lerp(H * 1.05, H * 0.52, surge) + rand(-12, 12) * surge;
     this.drawJumpscareFace(ctx, cx, cy, r);
+    // The signal ruptures for the first instant of the attack.
+    if (t < 0.12) {
+      this.game.effects.drawStatic(ctx, 0.9 - t * 6);
+    }
     // Hard cut to black at the very end.
     if (t > 0.88) {
       ctx.fillStyle = `rgba(0,0,0,${(t - 0.88) / 0.12})`;

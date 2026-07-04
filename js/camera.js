@@ -48,6 +48,7 @@ export class CameraSystem {
     this.isUp = false;
     this.activeIndex = 0;
     this.transition = 0;        // static-burst timer (raise/switch)
+    this.raise = 1;             // monitor slide-up animation, 0..1
     this.pings = new Map();     // node → seconds of motion-blink left
   }
 
@@ -59,6 +60,7 @@ export class CameraSystem {
     this.isUp = false;
     this.activeIndex = 0;
     this.transition = 0;
+    this.raise = 1;
     this.pings.clear();
   }
 
@@ -84,6 +86,7 @@ export class CameraSystem {
     } else {
       this.isUp = true;
       this.transition = 0.35;
+      this.raise = 0; // slides up over ~0.18 s; dropping is instant
       this.game.audio.camUp();
       // The monitor takes both hands: door lights die when it comes up.
       this.game.office.setLightsOff();
@@ -105,12 +108,17 @@ export class CameraSystem {
 
   handleClick(x, y) {
     for (const room of MAP_ROOMS) {
-      if (x >= room.x && x <= room.x + room.w && y >= room.y && y <= room.y + room.h) {
+      if (inRect(room, x, y)) {
         this.select(room.cam);
         return true;
       }
     }
     return false;
+  }
+
+  /** Is this canvas point over a clickable map room? (hover feedback) */
+  hitTest(x, y) {
+    return MAP_ROOMS.some((room) => inRect(room, x, y));
   }
 
   /** Flash a room on the map when something moves through it. */
@@ -121,6 +129,9 @@ export class CameraSystem {
 
   update(dt) {
     if (this.transition > 0) this.transition -= dt;
+    if (this.isUp && this.raise < 1) {
+      this.raise = Math.min(1, this.raise + dt / 0.18);
+    }
     for (const [node, t] of this.pings) {
       const left = t - dt;
       if (left <= 0) this.pings.delete(node);
@@ -212,20 +223,23 @@ export class CameraSystem {
     ctx.font = '12px "Courier New", monospace';
     ctx.fillText('FLOOR PLAN — TAP A ROOM', p.x + 12, p.y + 14);
 
+    const ptr = this.game.pointer;
     for (const room of MAP_ROOMS) {
       const active = room.cam === this.activeIndex;
+      const hovered = !active && inRect(room, ptr.x, ptr.y);
       const node = CAMS[room.cam].node;
       const ping = this.pings.get(node);
 
-      ctx.fillStyle = active ? 'rgba(120,190,140,0.35)' : 'rgba(50,60,68,0.55)';
+      ctx.fillStyle = active ? 'rgba(120,190,140,0.35)'
+        : (hovered ? 'rgba(80,95,105,0.6)' : 'rgba(50,60,68,0.55)');
       ctx.fillRect(room.x, room.y, room.w, room.h);
       if (ping) {
         // Motion blink fades over ~1.6 s.
         ctx.fillStyle = `rgba(210,60,60,${clamp(ping / 1.6, 0, 1) * 0.5})`;
         ctx.fillRect(room.x, room.y, room.w, room.h);
       }
-      ctx.strokeStyle = active ? '#7fd487' : '#4a545c';
-      ctx.lineWidth = active ? 2.5 : 1.5;
+      ctx.strokeStyle = active ? '#7fd487' : (hovered ? '#8a949c' : '#4a545c');
+      ctx.lineWidth = active ? 2.5 : (hovered ? 2 : 1.5);
       ctx.strokeRect(room.x, room.y, room.w, room.h);
 
       ctx.fillStyle = active ? '#c6f0ca' : '#9aa4ac';
@@ -531,4 +545,9 @@ export class CameraSystem {
     ctx.fillStyle = '#1c1f26';
     ctx.fillRect(W / 2 - 220, 300, 440, 18);
   }
+}
+
+/** Point-in-rect test shared by click and hover handling. */
+function inRect(r, x, y) {
+  return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
 }
