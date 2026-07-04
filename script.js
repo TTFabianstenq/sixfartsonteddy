@@ -1,5 +1,5 @@
 /**
- * Night Shift at Teddy's Toyworks — entry point.
+ * Six Farts On Teddy — entry point.
  *
  * Boots the game once the DOM is ready. Everything else lives in the
  * ES modules under /js. There is no build step: this file is loaded

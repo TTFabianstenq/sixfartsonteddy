@@ -2,7 +2,7 @@
 
 This directory is intentionally (almost) empty.
 
-Every visual asset in Night Shift at Teddy's Toyworks — the office, the
+Every visual asset in Six Farts On Teddy — the office, the
 six camera rooms, all four animatronic characters, their door
 silhouettes and jumpscare faces, the static/noise pool, the vignette and
 every UI element — is generated procedurally at runtime with the Canvas

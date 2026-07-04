@@ -2,7 +2,7 @@
 
 This directory is intentionally (almost) empty.
 
-Every sound in Night Shift at Teddy's Toyworks is synthesized at runtime
+Every sound in Six Farts On Teddy is synthesized at runtime
 with the Web Audio API — oscillators, filtered noise buffers and gain
 envelopes. That includes:
 

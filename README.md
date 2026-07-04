@@ -1,9 +1,9 @@
-# Night Shift at Teddy's Toyworks
+# Six Farts On Teddy
 
 A complete, original browser survival-horror game inspired by classic
-security-office night-watch gameplay. You are the new night watchman at a
-derelict toy factory. Four broken display machines wander the building
-after midnight. Manage two doors, two hallway lights and a six-camera
+security-office night-watch gameplay. You are the new night watchman at
+Teddy's Toyworks, a derelict toy factory. Four broken display machines
+wander the building after midnight. Manage two doors, two hallway lights and a six-camera
 network on a dying generator, and survive from **12 AM to 6 AM**.
 
 Built with **HTML5, CSS3 and vanilla JavaScript (ES6 modules)** on the

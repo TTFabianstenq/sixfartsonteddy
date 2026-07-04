@@ -1,4 +1,4 @@
-# HTTP headers for all Netlify deploys of Night Shift at Teddy's Toyworks.
+# HTTP headers for all Netlify deploys of Six Farts On Teddy.
 # The game is fully self-contained, so the CSP can be strict: everything
 # loads from this origin and nothing is inlined.
 
