@@ -1,0 +1,2 @@
+# The whole game lives at /, so any stray path falls back to index.html.
+/*  /index.html  200

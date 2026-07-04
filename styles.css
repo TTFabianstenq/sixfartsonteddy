@@ -1,0 +1,396 @@
+/* ==========================================================================
+   Night Shift at Teddy's Toyworks — stylesheet
+   All UI chrome, CRT dressing and menu screens live here. The gameplay
+   itself is rendered on the <canvas> element by the JS modules.
+   ========================================================================== */
+
+:root {
+  --bg: #050508;
+  --panel: #101018;
+  --ink: #cfd2d6;
+  --ink-dim: #7a7e86;
+  --accent: #d8b25a;      /* dusty toy-shop brass */
+  --danger: #b3202a;
+  --victory: #d8b25a;
+  --screen-glow: rgba(160, 190, 210, 0.06);
+  --font-ui: "Courier New", Courier, ui-monospace, monospace;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  overflow: hidden;
+}
+
+.noscript-warning {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  font-size: 1.2rem;
+  background: var(--bg);
+  z-index: 999;
+}
+
+/* --------------------------------------------------------------------------
+   Layout: a 16:9 stage centered in the viewport, letterboxed as needed.
+   -------------------------------------------------------------------------- */
+
+#game-root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, #0b0b12 0%, #000 85%);
+}
+
+#aspect {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  width: min(100vw, calc(100vh * 16 / 9));
+  height: min(100vh, calc(100vw * 9 / 16));
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+  /* Faint spherical CRT bulge suggested with an inset glow ring. */
+  box-shadow:
+    inset 0 0 90px rgba(0, 0, 0, 0.85),
+    inset 0 0 14px rgba(120, 160, 190, 0.05),
+    0 0 40px rgba(0, 0, 0, 0.9);
+}
+
+#game-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  image-rendering: auto;
+  cursor: crosshair;
+}
+
+/* --------------------------------------------------------------------------
+   CRT dressing: scanlines + aperture grille + flicker + vignette.
+   Kept on separate layers so the canvas below stays cheap to repaint.
+   -------------------------------------------------------------------------- */
+
+#crt-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 20;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0)   0px,
+      rgba(0, 0, 0, 0)   2px,
+      rgba(0, 0, 0, 0.22) 3px,
+      rgba(0, 0, 0, 0)   4px
+    ),
+    repeating-linear-gradient(
+      to right,
+      rgba(255, 60, 60, 0.015)  0px,
+      rgba(60, 255, 60, 0.015)  1px,
+      rgba(60, 60, 255, 0.015)  2px,
+      rgba(0, 0, 0, 0)          3px
+    );
+  mix-blend-mode: multiply;
+  animation: crt-flicker 0.12s steps(2) infinite;
+}
+
+#crt-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 21;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0) 55%,
+    rgba(0, 0, 0, 0.35) 85%,
+    rgba(0, 0, 0, 0.72) 100%
+  );
+}
+
+@keyframes crt-flicker {
+  0%   { opacity: 0.92; }
+  50%  { opacity: 1.0;  }
+  100% { opacity: 0.95; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #crt-overlay { animation: none; }
+}
+
+/* --------------------------------------------------------------------------
+   FPS counter
+   -------------------------------------------------------------------------- */
+
+#fps-counter {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  z-index: 40;
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: #7fd487;
+  text-shadow: 0 0 6px rgba(127, 212, 135, 0.6);
+  pointer-events: none;
+}
+
+.hidden { display: none !important; }
+
+/* --------------------------------------------------------------------------
+   Overlay screens (menus, results). Toggled with the .visible class.
+   -------------------------------------------------------------------------- */
+
+.screen {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.1rem;
+  padding: 2rem clamp(1rem, 6vw, 5rem);
+  background: rgba(3, 3, 6, 0.88);
+  text-align: center;
+}
+
+.screen.visible { display: flex; }
+.screen.translucent { background: rgba(3, 3, 6, 0.72); }
+.screen.opaque { background: #000; }
+
+.game-title {
+  font-size: clamp(2.4rem, 7vw, 4.6rem);
+  letter-spacing: 0.35em;
+  font-weight: 700;
+  color: var(--ink);
+  text-shadow:
+    0 0 18px rgba(216, 178, 90, 0.25),
+    2px 0 0 rgba(179, 32, 42, 0.35),
+    -2px 0 0 rgba(70, 130, 180, 0.3);
+}
+
+.glitch-text {
+  animation: title-jitter 4s infinite steps(1);
+}
+
+@keyframes title-jitter {
+  0%, 92%, 100% { transform: translate(0, 0) skewX(0deg); }
+  93%           { transform: translate(-3px, 1px) skewX(2deg); }
+  94%           { transform: translate(3px, -1px) skewX(-3deg); }
+  95%           { transform: translate(0, 0) skewX(0deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glitch-text { animation: none; }
+}
+
+.game-subtitle {
+  font-size: clamp(1rem, 2.4vw, 1.5rem);
+  letter-spacing: 0.5em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+
+.screen-title {
+  font-size: clamp(1.6rem, 4.5vw, 2.8rem);
+  letter-spacing: 0.3em;
+  color: var(--ink);
+  text-shadow: 0 0 14px var(--screen-glow);
+}
+
+.screen-title.blood {
+  color: var(--danger);
+  text-shadow: 0 0 22px rgba(179, 32, 42, 0.55);
+}
+
+.screen-title.gold {
+  color: var(--victory);
+  text-shadow: 0 0 22px rgba(216, 178, 90, 0.5);
+}
+
+.result-detail {
+  max-width: 46rem;
+  color: var(--ink-dim);
+  font-size: clamp(0.85rem, 1.8vw, 1.05rem);
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+/* --------------------------------------------------------------------------
+   Buttons
+   -------------------------------------------------------------------------- */
+
+.menu-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  min-width: min(22rem, 80%);
+}
+
+.menu-btn {
+  font-family: var(--font-ui);
+  font-size: clamp(0.9rem, 2vw, 1.15rem);
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: linear-gradient(180deg, #14141e 0%, #0c0c13 100%);
+  border: 1px solid #2c2c3a;
+  padding: 0.75em 1.4em;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.menu-btn:hover,
+.menu-btn:focus-visible {
+  color: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 16px rgba(216, 178, 90, 0.18);
+  outline: none;
+}
+
+.menu-btn:active { transform: translateY(1px); }
+
+.menu-btn:disabled {
+  color: #3c3f45;
+  border-color: #1c1c26;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.menu-btn.danger:hover,
+.menu-btn.danger:focus-visible {
+  color: var(--danger);
+  border-color: var(--danger);
+  box-shadow: 0 0 16px rgba(179, 32, 42, 0.25);
+}
+
+.menu-footnote {
+  margin-top: 0.6rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  color: var(--ink-dim);
+}
+
+.menu-stats {
+  font-size: 0.78rem;
+  letter-spacing: 0.15em;
+  color: var(--ink-dim);
+  line-height: 1.8;
+}
+
+/* --------------------------------------------------------------------------
+   Settings grid
+   -------------------------------------------------------------------------- */
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: auto minmax(10rem, 16rem);
+  gap: 1rem 1.6rem;
+  align-items: center;
+  text-align: left;
+  font-size: clamp(0.85rem, 1.8vw, 1rem);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.settings-grid input[type="range"] {
+  accent-color: var(--accent);
+  width: 100%;
+  height: 1.1rem;
+  cursor: pointer;
+  background: transparent;
+}
+
+.settings-grid input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 1.15rem;
+  height: 1.15rem;
+  cursor: pointer;
+  justify-self: start;
+}
+
+/* --------------------------------------------------------------------------
+   Instructions
+   -------------------------------------------------------------------------- */
+
+.instructions-body {
+  max-width: 52rem;
+  max-height: 58vh;
+  overflow-y: auto;
+  text-align: left;
+  font-size: clamp(0.8rem, 1.7vw, 0.95rem);
+  line-height: 1.7;
+  color: var(--ink-dim);
+  padding: 0 1rem;
+  scrollbar-width: thin;
+  scrollbar-color: #2c2c3a transparent;
+}
+
+.instructions-body strong { color: var(--ink); }
+
+.instructions-body ul {
+  list-style: none;
+  margin: 0.8rem 0;
+}
+
+.instructions-body li {
+  padding-left: 1.2rem;
+  position: relative;
+  margin-bottom: 0.45rem;
+}
+
+.instructions-body li::before {
+  content: ">";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+}
+
+.instructions-body kbd {
+  font-family: var(--font-ui);
+  background: #1a1a26;
+  border: 1px solid #33334a;
+  border-radius: 3px;
+  padding: 0 0.4em;
+  color: var(--accent);
+}
+
+.dossier-title {
+  margin-top: 1.2rem;
+  letter-spacing: 0.3em;
+  color: var(--danger);
+}
+
+/* --------------------------------------------------------------------------
+   Night intro
+   -------------------------------------------------------------------------- */
+
+.night-intro {
+  font-size: clamp(1.8rem, 5vw, 3.2rem);
+  letter-spacing: 0.45em;
+  color: var(--ink);
+}
+
+.night-intro-time {
+  font-size: clamp(1rem, 2.6vw, 1.5rem);
+  letter-spacing: 0.35em;
+  color: var(--ink-dim);
+}

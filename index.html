@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Night Shift at Teddy's Toyworks — an original browser survival-horror game. Survive six nights in an abandoned toy factory using doors, lights and security cameras before the power runs out.">
+  <meta name="theme-color" content="#0a0a0f">
+  <title>Night Shift at Teddy's Toyworks</title>
+  <link rel="icon" href="favicon.ico" sizes="16x16 32x32" type="image/x-icon">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <noscript>
+    <div class="noscript-warning">
+      Night Shift at Teddy's Toyworks requires JavaScript to run. Please enable it and reload the page.
+    </div>
+  </noscript>
+
+  <main id="game-root" aria-label="Night Shift at Teddy's Toyworks">
+    <div id="aspect">
+      <!-- All gameplay is rendered here at a fixed internal resolution. -->
+      <canvas id="game-canvas" width="1280" height="720"></canvas>
+
+      <!-- CRT dressing: scanlines, vignette and flicker are pure CSS. -->
+      <div id="crt-overlay" aria-hidden="true"></div>
+      <div id="crt-vignette" aria-hidden="true"></div>
+
+      <div id="fps-counter" class="hidden" aria-hidden="true">60 FPS</div>
+
+      <!-- ============================ MAIN MENU ============================ -->
+      <section id="screen-menu" class="screen visible">
+        <h1 class="game-title glitch-text">NIGHT&nbsp;SHIFT</h1>
+        <p class="game-subtitle">at Teddy's Toyworks</p>
+        <nav class="menu-buttons">
+          <button id="btn-new-game" class="menu-btn">New Game</button>
+          <button id="btn-continue" class="menu-btn">Continue &mdash; Night 1</button>
+          <button id="btn-settings" class="menu-btn">Settings</button>
+          <button id="btn-instructions" class="menu-btn">How to Play</button>
+        </nav>
+        <div id="menu-stats" class="menu-stats" aria-label="Statistics"></div>
+        <p class="menu-footnote">Headphones recommended &middot; Contains flashing imagery and sudden loud sounds</p>
+      </section>
+
+      <!-- ============================ SETTINGS ============================ -->
+      <section id="screen-settings" class="screen">
+        <h2 class="screen-title">SETTINGS</h2>
+        <div class="settings-grid">
+          <label for="set-volume">Master Volume</label>
+          <input type="range" id="set-volume" min="0" max="100" step="1" value="80">
+          <label for="set-effects">Visual FX Intensity</label>
+          <input type="range" id="set-effects" min="0" max="100" step="1" value="70">
+          <label for="set-shake">Screen Shake</label>
+          <input type="checkbox" id="set-shake" checked>
+          <label for="set-fps">FPS Counter</label>
+          <input type="checkbox" id="set-fps">
+        </div>
+        <div class="menu-buttons">
+          <button id="btn-reset-save" class="menu-btn danger">Erase Save Data</button>
+          <button id="btn-settings-back" class="menu-btn">Back</button>
+        </div>
+      </section>
+
+      <!-- ========================== INSTRUCTIONS ========================== -->
+      <section id="screen-instructions" class="screen">
+        <h2 class="screen-title">EMPLOYEE BRIEFING</h2>
+        <div class="instructions-body">
+          <p>Welcome to the night shift, watchman. The old display machines in this
+          factory wander after midnight. Keep them out of your booth until
+          <strong>6&nbsp;AM</strong>.</p>
+          <ul>
+            <li><strong>Doors</strong> — seal the left and right doorways. Click the red
+            panels, or press <kbd>Q</kbd> / <kbd>E</kbd>.</li>
+            <li><strong>Lights</strong> — check the blind spots just outside each door.
+            Click the white panels, or press <kbd>A</kbd> / <kbd>D</kbd>.</li>
+            <li><strong>Cameras</strong> — click the CAMERA strip or press
+            <kbd>Space</kbd>. Switch feeds with the map or keys <kbd>1</kbd>&ndash;<kbd>6</kbd>.</li>
+            <li><strong>Power</strong> — everything you switch on drains the generator.
+            At 0% you are in the dark, and something knows it.</li>
+            <li><kbd>Esc</kbd> or <kbd>P</kbd> pauses the shift.</li>
+          </ul>
+          <p class="dossier-title">MACHINE DOSSIER</p>
+          <ul class="dossier">
+            <li><strong>Teddy Ragbear</strong> — the patchwork mascot. Only creeps while
+            you are buried in the monitors. Favors the east side.</li>
+            <li><strong>Moppet</strong> — a rag doll that scurries down the west hall.
+            She freezes when her camera is watched... for a while.</li>
+            <li><strong>Sprocket</strong> — a wind-up tin rabbit in the storage bay.
+            Ignore him too long and he sprints. Check CAM 5 to slow his spring.</li>
+            <li><strong>Hollow</strong> — an owl that unbolts itself and reappears at
+            either doorway. Listen for the hoot, then check your door lights.</li>
+          </ul>
+        </div>
+        <div class="menu-buttons">
+          <button id="btn-instructions-back" class="menu-btn">Back</button>
+        </div>
+      </section>
+
+      <!-- ============================= PAUSE ============================== -->
+      <section id="screen-pause" class="screen translucent">
+        <h2 class="screen-title">SHIFT PAUSED</h2>
+        <div class="menu-buttons">
+          <button id="btn-resume" class="menu-btn">Resume</button>
+          <button id="btn-restart-night" class="menu-btn">Restart Night</button>
+          <button id="btn-quit-menu" class="menu-btn">Quit to Menu</button>
+        </div>
+      </section>
+
+      <!-- =========================== NIGHT INTRO ========================== -->
+      <section id="screen-night" class="screen opaque">
+        <p id="night-intro-label" class="night-intro">Night 1</p>
+        <p class="night-intro-time">12:00 AM</p>
+      </section>
+
+      <!-- ============================ GAME OVER =========================== -->
+      <section id="screen-gameover" class="screen">
+        <h2 class="screen-title blood">SHIFT TERMINATED</h2>
+        <p id="gameover-detail" class="result-detail">You were found by something in the dark.</p>
+        <div class="menu-buttons">
+          <button id="btn-retry" class="menu-btn">Try Again</button>
+          <button id="btn-gameover-menu" class="menu-btn">Main Menu</button>
+        </div>
+      </section>
+
+      <!-- ============================= VICTORY ============================ -->
+      <section id="screen-victory" class="screen">
+        <h2 class="screen-title gold">6:00 AM</h2>
+        <p id="victory-detail" class="result-detail">You survived the night.</p>
+        <div class="menu-buttons">
+          <button id="btn-next-night" class="menu-btn">Next Night</button>
+          <button id="btn-victory-menu" class="menu-btn">Main Menu</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>

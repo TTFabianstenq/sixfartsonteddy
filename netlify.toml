@@ -1,0 +1,13 @@
+# Netlify configuration for Night Shift at Teddy's Toyworks.
+#
+# The project is 100% static: no build step, no plugins, no functions,
+# no dependencies. Publishing the repository root as-is (or dragging the
+# folder into Netlify Drop) is a complete deployment.
+#
+# HTTP headers live in _headers and rewrites in _redirects so the same
+# rules also apply to drag-and-drop deploys, which ignore netlify.toml
+# header blocks defined inline.
+
+[build]
+  publish = "."
+  command = ""
